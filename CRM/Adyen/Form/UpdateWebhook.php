@@ -9,14 +9,14 @@
  +--------------------------------------------------------------------+
  */
 
-use CRM_Stripe_ExtensionUtil as E;
+use CRM_Adyen_ExtensionUtil as E;
 
 /**
  * Form controller class
  *
  * @see https://wiki.civicrm.org/confluence/display/CRMDOC/QuickForm+Reference
  */
-class CRM_Stripe_Form_UpdateWebhook extends CRM_Core_Form {
+class CRM_Adyen_Form_UpdateWebhook extends CRM_Core_Form {
 
   public function buildQuickForm() {
     // Defaults.
@@ -26,7 +26,7 @@ class CRM_Stripe_Form_UpdateWebhook extends CRM_Core_Form {
 
     // Run check.
     $messages = [];
-    $webhooks = new CRM_Stripe_Webhook();
+    $webhooks = new CRM_Adyen_Webhook();
     $webhooks->check($messages);
     if (!$messages) {
       $this->assign('isAllOk', 1);
@@ -52,7 +52,7 @@ class CRM_Stripe_Form_UpdateWebhook extends CRM_Core_Form {
   public function postProcess() {
     $messages = [];
     $attemptFix = TRUE;
-    $webhooks = new CRM_Stripe_Webhook();
+    $webhooks = new CRM_Adyen_Webhook();
     $webhooks->check($messages, $attemptFix);
 
     if ($messages) {

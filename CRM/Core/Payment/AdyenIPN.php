@@ -25,7 +25,7 @@ class CRM_Core_Payment_AdyenIPN {
   protected $_paymentProcessor;
 
   /**
-   * The CiviCRM contact ID that maps to the Stripe customer
+   * The CiviCRM contact ID that maps to the customer
    *
    * @var int
    */
@@ -34,22 +34,22 @@ class CRM_Core_Payment_AdyenIPN {
   // Properties of the event.
 
   /**
-   * @var string The Stripe Subscription ID
+   * @var string The Subscription ID
    */
   protected $subscription_id = NULL;
 
   /**
-   * @var string The Stripe Customer ID
+   * @var string The Customer ID
    */
   protected $customer_id = NULL;
 
   /**
-   * @var string The Stripe Charge ID
+   * @var string The Charge ID
    */
   protected $charge_id = NULL;
 
   /**
-   * @var string The stripe Invoice ID (mapped to trxn_id on a contribution for recurring contributions)
+   * @var string The Invoice ID (mapped to trxn_id on a contribution for recurring contributions)
    */
   protected $invoice_id = NULL;
 
@@ -64,12 +64,12 @@ class CRM_Core_Payment_AdyenIPN {
   protected $amount = 0.0;
 
   /**
-   * @var float The fee charged by Stripe
+   * @var float The fee charged
    */
   protected $fee = 0.0;
 
   /**
-   * @var array The current contribution (linked to Stripe charge(single)/invoice(subscription)
+   * @var array The current contribution
    */
   protected $contribution = NULL;
 
@@ -104,7 +104,7 @@ class CRM_Core_Payment_AdyenIPN {
    */
   public function setEventType($eventType) {
     $this->eventType = $eventType;
-    if (!in_array($this->eventType, CRM_Stripe_Webhook::getDefaultEnabledEvents())) {
+    if (!in_array($this->eventType, CRM_Adyen_Webhook::getDefaultEnabledEvents())) {
       return FALSE;
     }
     return TRUE;
@@ -128,28 +128,28 @@ class CRM_Core_Payment_AdyenIPN {
   /**
    * @return string|null
    */
-  public function getStripeCustomerID() {
+  public function getAdyenCustomerID() {
     return $this->customer_id;
   }
 
   /**
    * @return string|null
    */
-  public function getStripeSubscriptionID() {
+  public function getAdyenSubscriptionID() {
     return $this->subscription_id;
   }
 
   /**
    * @return string|null
    */
-  public function getStripeInvoiceID() {
+  public function getAdyenInvoiceID() {
     return $this->invoice_id;
   }
 
   /**
    * @return string|null
    */
-  public function getStripeChargeID() {
+  public function getAdyenChargeID() {
     return $this->charge_id;
   }
 

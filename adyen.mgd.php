@@ -17,7 +17,7 @@ return [
       'class_name' => 'Payment_Adyen',
       'user_name_label' => 'Merchant Account',
       'password_label' => 'X-API-Key',
-      'signature_label' => 'clientKey:URLPrefix',
+      'signature_label' => 'JSON config',
       'url_site_default' => 'http://unused.com',
       'url_site_test_default' => 'http://unused.com',
       'billing_mode' => 1,

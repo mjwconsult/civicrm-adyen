@@ -398,8 +398,6 @@ class CRM_Core_Payment_Adyen extends CRM_Core_Payment {
 
   /**
    * Process payment
-   * Submit a payment using Stripe's PHP API:
-   * https://stripe.com/docs/api?lang=php
    * Payment processors should set payment_status_id/payment_status.
    *
    * @param array|PropertyBag $params
@@ -436,7 +434,6 @@ class CRM_Core_Payment_Adyen extends CRM_Core_Payment {
    *
    * @throws \CRM_Core_Exception
    * @throws \CiviCRM_API3_Exception
-   * @throws \Stripe\Exception\UnknownApiErrorException
    */
   public function handlePaymentNotification() {
     // Set default http response to 200
