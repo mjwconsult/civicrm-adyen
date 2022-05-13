@@ -264,6 +264,11 @@ class CRM_Core_Payment_AdyenIPN {
         throw new \Exception('Invalid notification: HMAC verification failed');
       }
 
+      if ($this->getPaymentProcessor()->getMerchantAccount() !== $item['merchantAccountCode']) {
+        \Civi::log()->debug('MerchantAccountCode ' . $item['merchantAccountCode'] . ' does not match the configured code CiviCRM - ignoring');
+        continue;
+      }
+
       $this->events[] = $item;
     }
   }
@@ -279,9 +284,9 @@ class CRM_Core_Payment_AdyenIPN {
     foreach ($this->events as $event) {
       // Nb. we set trigger and identifier here mostly to help when troubleshooting.
       $records[] = [
-        'event_id'   => $event->id,
-        'trigger'    => $event->eventCode,
-        'identifier' => $event->pspReference, // We don't strictly need this but it might be useful for troubleshooting
+        'event_id'   => $event['id'],
+        'trigger'    => $event['eventCode'],
+        'identifier' => $event['pspReference'], // We don't strictly need this but it might be useful for troubleshooting
         'data'       => json_encode($event),
       ];
     }
