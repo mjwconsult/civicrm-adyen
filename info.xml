@@ -9,12 +9,11 @@
     <email>mjw@mjwconsult.co.uk</email>
   </maintainer>
   <urls>
-    <url desc="Main Extension Page">http://FIXME</url>
-    <url desc="Documentation">http://FIXME</url>
+    <url desc="Main Extension Page">https://github.com/mjwconsult/civicrm-adyen</url>
     <url desc="Support">https://mjw.pt/support/adyen</url>
     <url desc="Licensing">http://www.gnu.org/licenses/agpl-3.0.html</url>
   </urls>
-  <releaseDate>2022-02-08</releaseDate>
+  <releaseDate>2022-05-15</releaseDate>
   <version>0.1</version>
   <develStage>alpha</develStage>
   <compatibility>
