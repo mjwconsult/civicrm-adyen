@@ -229,7 +229,8 @@ class CRM_Core_Payment_AdyenIPN {
 
   public function parseWebhookRequest($rawPayload) {
     $payload = json_decode($rawPayload, TRUE);
-    $notifications = [];
+    // \Civi::log()->debug('payload: ' . print_r($payload,TRUE));
+
     if (empty($payload['notificationItems']) || !is_array($payload['notificationItems'])) {
       throw new \Exception('Invalid notification payload: notificationItems is empty');
     }
@@ -420,7 +421,7 @@ class CRM_Core_Payment_AdyenIPN {
   }
 
   private function getAmountFromEvent($event) {
-    return (float) $event['amount']['value'] / 100;
+    return ((float) $event['amount']['value']) / 100;
   }
 
   private function getCurrencyFromEvent($event) {
