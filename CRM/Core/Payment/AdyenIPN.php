@@ -9,8 +9,10 @@
  +--------------------------------------------------------------------+
  */
 
+use Civi\Api4\Contact;
 use Civi\Api4\Contribution;
 use Civi\Api4\ContributionRecur;
+use Civi\Api4\Email;
 use Civi\Api4\PaymentprocessorWebhook;
 
 /**
@@ -375,7 +377,7 @@ class CRM_Core_Payment_AdyenIPN {
    * @return string
    */
   private function doAUTHORISATION($event) :string {
-    $trxnID = $this->getContributionTrxnID($event);
+    $trxnID = $this->getContributionTrxnIDFromEvent($event);
     // The authorization for the card was not successful so we ignore it.
     if (empty($event['success'])) {
       throw new CRM_Adyen_WebhookEventIgnoredException('IgnoringAuthorization not successful for merchant Reference: ' . $trxnID);
@@ -390,14 +392,13 @@ class CRM_Core_Payment_AdyenIPN {
       return 'OK. Contribution already exists with ID: ' . $contribution['id'];
     }
 
+    $contactID = $this->getContactIDFromEvent($event);
     $contribution = Contribution::create(FALSE)
       ->addValue('total_amount', $this->getAmountFromEvent($event))
-      ->addValue('currency', $this->getAmountFromEvent($event))
+      ->addValue('currency', $this->getCurrencyFromEvent($event))
       ->addValue('contribution_status_id:name', 'Pending')
       ->addValue('trxn_id', $trxnID)
-      // @fixme: This is WRONG! But we don't have anything in the authorization that we can match on
-      //   Maybe  [additionalData][cardHolderName] => J. De Tester but that requires parsing first..
-      ->addValue('contact_id', 'user_contact_id')
+      ->addValue('contact_id', $contactID)
       // @fixme: This should probably be configurable
       ->addValue('financial_type_id.name', 'Donation')
       ->addValue('payment_instrument_id:name', 'Credit Card')
@@ -407,24 +408,78 @@ class CRM_Core_Payment_AdyenIPN {
   }
 
   /**
+   * Get the contact ID from the event using the shopperEmail / shopperName
+   *
+   * @param array $event
+   *
+   * @return int
+   * @throws \API_Exception
+   * @throws \Civi\API\Exception\UnauthorizedException
+   */
+  private function getContactIDFromEvent(array $event): int {
+    $email = $event['additionalData']['shopperEmail'];
+    //  [shopperName] => [first name=Ivan, infix=null, last name=Velasquez, gender=null]
+    preg_match('/\[first name=([^,]*)/', $event['additionalData']['shopperName'], $firstName);
+    $firstName = $firstName[1] ?? NULL;
+    preg_match('/\[last name=([^,]*)/', $event['additionalData']['shopperName'], $lastName);
+    $lastName = $lastName[1] ?? NULL;
+
+    $contact = Contact::get(FALSE)
+      ->addWhere('contact_type:name', '=', 'Individual');
+    if (!empty($firstName)) {
+      $contact->addWhere('first_name', '=', $firstName);
+    }
+    if (!empty($lastName)) {
+      $contact->addWhere('last_name', '=', $lastName);
+    }
+    if (!empty($email)) {
+      $contact->addJoin('Email AS email', 'LEFT')
+      $contact->addWhere('email.email', '=', $email);
+    }
+    $contact = $contact->execute()->first();
+    if (!empty($contact)) {
+      return $contact['id'];
+    }
+
+    $newContact = Contact::create(FALSE)
+      ->addValue('contact_type:name', 'Individual');
+    if (!empty($firstName)) {
+      $newContact->addValue('first_name', $firstName);
+    }
+    if (!empty($lastName)) {
+      $newContact->addValue('last_name', $lastName);
+    }
+    $contact = $newContact->execute()->first();
+
+    if (!empty($email)) {
+      Email::create(FALSE)
+        ->addValue('contact_id', $contact['id'])
+        ->addValue('location_type_id:name', 'Billing')
+        ->addValue('email', $email)
+        ->execute();
+    }
+    return $contact['id'];
+  }
+
+  /**
    * Get the Contribution TrxnID from the notification
    * @param array $event
    *
    * @return mixed
    * @throws \Exception
    */
-  private function getContributionTrxnID($event) {
+  private function getContributionTrxnIDFromEvent(array $event): string {
     if (empty($event['merchantReference'])) {
       throw new Exception('No merchantReference found in payload');
     }
     return $event['merchantReference'];
   }
 
-  private function getAmountFromEvent($event) {
+  private function getAmountFromEvent(array $event): float {
     return ((float) $event['amount']['value']) / 100;
   }
 
-  private function getCurrencyFromEvent($event) {
+  private function getCurrencyFromEvent(array $event): string {
     return $event['amount']['currency'];
   }
 
