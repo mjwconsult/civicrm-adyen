@@ -421,7 +421,7 @@ class CRM_Core_Payment_AdyenIPN {
     //  [shopperName] => [first name=Ivan, infix=null, last name=Velasquez, gender=null]
     preg_match('/\[first name=([^,]*)/', $event['additionalData']['shopperName'], $firstName);
     $firstName = $firstName[1] ?? NULL;
-    preg_match('/\[last name=([^,]*)/', $event['additionalData']['shopperName'], $lastName);
+    preg_match('/\last name=([^,]*)/', $event['additionalData']['shopperName'], $lastName);
     $lastName = $lastName[1] ?? NULL;
 
     $contact = Contact::get(FALSE)
@@ -433,7 +433,7 @@ class CRM_Core_Payment_AdyenIPN {
       $contact->addWhere('last_name', '=', $lastName);
     }
     if (!empty($email)) {
-      $contact->addJoin('Email AS email', 'LEFT')
+      $contact->addJoin('Email AS email', 'LEFT');
       $contact->addWhere('email.email', '=', $email);
     }
     $contact = $contact->execute()->first();
