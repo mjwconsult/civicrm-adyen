@@ -343,9 +343,9 @@ class CRM_Core_Payment_AdyenIPN {
   public function processWebhookEvent($event) :StdClass {
     $return = (object) ['message' => NULL, 'ok' => FALSE, 'exception' => NULL];
     // This event ID is only used for logging messages.
-    $this->setEventID($event['id']);
     try {
-      $method = 'do' . ucfirst($this->getEventType());
+      // Eg. doAUTHORIZATION
+      $method = 'do' . $this->getEventType();
       $return->message = $this->$method($event);
       $return->ok = TRUE;
       \Civi::log()->info($return->message);
@@ -361,8 +361,6 @@ class CRM_Core_Payment_AdyenIPN {
       $return->exception = $e;
       \Civi::log()->error($return->message);
     }
-    // Add message to log with appropriate value
-    $this->setEventID('');
     return $return;
   }
 
@@ -375,7 +373,7 @@ class CRM_Core_Payment_AdyenIPN {
    *
    * @return string
    */
-  private function doAuthorization($event) :string {
+  private function doAUTHORIZATION($event) :string {
     $trxnID = $this->getContributionTrxnID($event);
     // The authorization for the card was not successful so we ignore it.
     if (empty($event['success'])) {
