@@ -39,4 +39,11 @@ Currently it loads with a fixed amount (EUR 10).
 
 - The webhook checks do not work - it is supposed to authorize using the X-API-Key but returns 401 unauthorized when getting the list of webhooks.
 
--
+## Reference
+
+See https://docs.adyen.com/account/manage-payments
+
+PSP reference: Adyen's unique 16-character reference for this payment.
+Merchant reference: Your reference for this payment.
+
+CiviCRM Contribution `trxn_id` = Adyen Merchant Reference

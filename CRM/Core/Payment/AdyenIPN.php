@@ -9,6 +9,7 @@
  +--------------------------------------------------------------------+
  */
 
+use Civi\Api4\Contribution;
 use Civi\Api4\ContributionRecur;
 use Civi\Api4\PaymentprocessorWebhook;
 
@@ -284,7 +285,7 @@ class CRM_Core_Payment_AdyenIPN {
     foreach ($this->events as $event) {
       // Nb. we set trigger and identifier here mostly to help when troubleshooting.
       $records[] = [
-        'event_id'   => $event['id'],
+        'event_id'   => $event['eventDate'],
         'trigger'    => $event['eventCode'],
         'identifier' => $event['pspReference'], // We don't strictly need this but it might be useful for troubleshooting
         'data'       => json_encode($event),
@@ -318,8 +319,7 @@ class CRM_Core_Payment_AdyenIPN {
     $this->setEventID($webhookEvent['event_id']);
     $this->setEventType($webhookEvent['trigger']);
 
-    // @todo consider instantiating the GC Event object here.
-    $event = json_decode($webhookEvent['data']);
+    $event = json_decode($webhookEvent['data'], TRUE);
 
     $processingResult = $this->processWebhookEvent($event);
     // Update the stored webhook event.
@@ -341,35 +341,88 @@ class CRM_Core_Payment_AdyenIPN {
    * @throws \Civi\API\Exception\UnauthorizedException
    */
   public function processWebhookEvent($event) :StdClass {
-    $return = (object) ['message' => '', 'ok' => FALSE, 'exception' => NULL];
+    $return = (object) ['message' => NULL, 'ok' => FALSE, 'exception' => NULL];
+    // This event ID is only used for logging messages.
+    $this->setEventID($event['id']);
     try {
-      $this->setInputParameters();
-      $return->ok = $this->processEventType();
+      $method = 'do' . ucfirst($this->getEventType());
+      $return->message = $this->$method($event);
+      $return->ok = TRUE;
+      \Civi::log()->info($return->message);
+    }
+    catch (CRM_Adyen_WebhookEventIgnoredException $e) {
+      $return->message = $e->getMessage();
+      $return->ok = $e->isOk();
+      $return->exception = $e;
+      \Civi::log()->debug($return->message, $e->getCode());
     }
     catch (Exception $e) {
-      if ($this->exceptionOnFailure) {
-        // Re-throw a modified exception. (Special case for phpunit testing).
-        $return->message = get_class($e) . ": " . $e->getMessage();
-        throw new RuntimeException($return->message, $e->getCode(), $e);
-      }
-      else {
-        // Normal use.
-        $return->ok = FALSE;
-        if (($e instanceof \Stripe\Exception\InvalidRequestException) && ($e->getHttpStatus() === 404)) {
-          /** @var \Stripe\Exception\InvalidRequestException $e */
-          // Probably "is no longer available because it's aged out of our retention policy"
-          // We don't need a backtrace
-          $return->message = $e->getMessage();
-        }
-        else {
-          $return->message = $e->getMessage() . "\n" . $e->getTraceAsString();
-        }
-        $return->exception = $e;
-        \Civi::log()->error("AdyenIPN: processWebhookEvent failed. EventID: {$this->eventID} : " . $return->message);
-      }
+      $return->message = "FAILED: Had to skip webhook event. Reason: " . $e->getMessage(). "\n" . $e->getTraceAsString();
+      $return->exception = $e;
+      \Civi::log()->error($return->message);
+    }
+    // Add message to log with appropriate value
+    $this->setEventID('');
+    return $return;
+  }
+
+  /**
+   * Handle the "AUTHORIZATION" webhook notification
+   * @see https://docs.adyen.com/api-explorer/#/Webhooks/latest/post/AUTHORISATION
+   * This creates a pending contribution in CiviCRM if it does not already exist
+   *
+   * @param array $event
+   *
+   * @return string
+   */
+  private function doAuthorization($event) :string {
+    $trxnID = $this->getContributionTrxnID($event);
+    // The authorization for the card was not successful so we ignore it.
+    if (empty($event['success'])) {
+      throw new CRM_Adyen_WebhookEventIgnoredException('IgnoringAuthorization not successful for merchant Reference: ' . $trxnID);
     }
 
-    return $return;
+    // The authorization for the card was successful so we create a pending contribution if we don't already have one.
+    $contribution = Contribution::get(FALSE)
+      ->addWhere('trxn_id', '=', $trxnID)
+      ->execute()
+      ->first();
+    if (!empty($contribution)) {
+      return 'OK. Contribution already exists with ID: ' . $contribution['id'];
+    }
+
+    $contribution = Contribution::create(FALSE)
+      ->addValue('total_amount', $this->getAmountFromEvent($event))
+      ->addValue('currency', $this->getAmountFromEvent($event))
+      ->addValue('contribution_status_id:name', 'Pending')
+      ->addValue('trxn_id', $trxnID)
+      // @fixme: This is WRONG! But we don't have anything in the authorization that we can match on
+      //   Maybe  [additionalData][cardHolderName] => J. De Tester but that requires parsing first..
+      ->addValue('contact_id', 'user_contact_id')
+      ->execute();
+    return 'OK. Contribution created with ID: ' . $contribution['id'];
+  }
+
+  /**
+   * Get the Contribution TrxnID from the notification
+   * @param array $event
+   *
+   * @return mixed
+   * @throws \Exception
+   */
+  private function getContributionTrxnID($event) {
+    if (empty($event['merchantReference'])) {
+      throw new Exception('No merchantReference found in payload');
+    }
+    return $event['merchantReference'];
+  }
+
+  private function getAmountFromEvent($event) {
+    return (float) $event['amount']['value'] / 100;
+  }
+
+  private function getCurrencyFromEvent($event) {
+    return $event['amount']['currency'];
   }
 
   /**
