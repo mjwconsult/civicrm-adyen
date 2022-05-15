@@ -365,7 +365,7 @@ class CRM_Core_Payment_AdyenIPN {
   }
 
   /**
-   * Handle the "AUTHORIZATION" webhook notification
+   * Handle the "AUTHORISATION" webhook notification
    * @see https://docs.adyen.com/api-explorer/#/Webhooks/latest/post/AUTHORISATION
    * This creates a pending contribution in CiviCRM if it does not already exist
    *
@@ -373,7 +373,7 @@ class CRM_Core_Payment_AdyenIPN {
    *
    * @return string
    */
-  private function doAUTHORIZATION($event) :string {
+  private function doAUTHORISATION($event) :string {
     $trxnID = $this->getContributionTrxnID($event);
     // The authorization for the card was not successful so we ignore it.
     if (empty($event['success'])) {
@@ -397,7 +397,11 @@ class CRM_Core_Payment_AdyenIPN {
       // @fixme: This is WRONG! But we don't have anything in the authorization that we can match on
       //   Maybe  [additionalData][cardHolderName] => J. De Tester but that requires parsing first..
       ->addValue('contact_id', 'user_contact_id')
-      ->execute();
+      // @fixme: This should probably be configurable
+      ->addValue('financial_type_id.name', 'Donation')
+      ->addValue('payment_instrument_id:name', 'Credit Card')
+      ->execute()
+      ->first();
     return 'OK. Contribution created with ID: ' . $contribution['id'];
   }
 

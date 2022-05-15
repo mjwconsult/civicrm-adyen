@@ -453,23 +453,6 @@ class CRM_Core_Payment_Adyen extends CRM_Core_Payment {
    * Return TRUE for success, FALSE if there's a problem
    */
   public function processWebhookEvent(array $webhookEvent) :bool {
-    // If there is another copy of this event in the table with a lower ID, then
-    // this is a duplicate that should be ignored. We do not worry if there is one with a higher ID
-    // because that means that while there are duplicates, we'll only process the one with the lowest ID.
-    $duplicates = PaymentprocessorWebhook::get(FALSE)
-      ->selectRowCount()
-      ->addWhere('event_id', '=', $webhookEvent['event_id'])
-      ->addWhere('id', '<', $webhookEvent['id'])
-      ->execute()->count();
-    if ($duplicates) {
-      PaymentprocessorWebhook::update(FALSE)
-        ->addWhere('id', '=', $webhookEvent['id'])
-        ->addValue('status', 'error')
-        ->addValue('message', 'Refusing to process this event as it is a duplicate.')
-        ->execute();
-      return FALSE;
-    }
-
     $handler = new CRM_Core_Payment_AdyenIPN($this);
     return $handler->processQueuedWebhookEvent($webhookEvent);
   }
