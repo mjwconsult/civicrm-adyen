@@ -19,13 +19,7 @@ class CRM_Adyen_Check {
   /**
    * @var string
    */
-  const API_VERSION = '2020-08-27';
-  const API_MIN_VERSION = '2019-12-03';
-
-  /**
-   * @var string
-   */
-  const MIN_VERSION_MJWSHARED = '1.2.4';
+  const MIN_VERSION_MJWSHARED = '1.2.8';
   const MIN_VERSION_FIREWALL = '1.5.1';
 
   /**
